@@ -16,9 +16,21 @@ if not api_key:
     st.warning("⚠️ Masukkan Gemini API Key Anda di bilah samping (sidebar) untuk mengaktifkan AI Online.")
     st.stop()
 
-# Konfigurasi Gemini
+# Konfigurasi Gemini dengan fallback model otomatis
 genai.configure(api_key=api_key)
-model = genai.GenerativeModel("gemini-1.5-flash")
+
+def dapatkan_model():
+    # Daftar prioritas model resmi Google
+    daftar_model = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-pro']
+    for nama in daftar_model:
+        try:
+            m = genai.GenerativeModel(nama)
+            return m
+        except Exception:
+            continue
+    return genai.GenerativeModel('gemini-1.5-flash')
+
+model = dapatkan_model()
 
 # Menu Navigasi
 menu = st.sidebar.radio(
@@ -44,18 +56,21 @@ if menu == "🌐 Terjemah Kitab & Hadits":
         if btn_terjemah and teks_asal:
             with st.spinner("AI sedang menganalisis i'rab dan konteks maknanya..."):
                 prompt = f"""
-                Bertindaklah sebagai ahli filologi bahasa Arab dan pakar ilmu syariat.
+                Bertindaklah sebagai pakar bahasa Arab dan ilmu syariat.
                 Terjemahkan teks berikut dengan akurasi sangat tinggi.
                 Arah terjemahan: {arah}
                 Teks: "{teks_asal}"
 
-                Format output:
-                1. Hasil Terjemahan (Lugawi dan kontekstual)
-                2. Penjelasan Makna Syar'i / Kaidah Penting (jika teks berupa hadits/ibarat fikih)
-                3. Catatan I'rab / Kosakata Kunci yang wajib dipahami penuntut ilmu
+                Format sajian:
+                1. Terjemahan Utama (Lugawi & kontekstual)
+                2. Penjelasan Makna Syar'i / Istilah Kunci
+                3. Catatan Kaidah / I'rab penting secara ringkas
                 """
-                respon = model.generate_content(prompt)
-                st.markdown(respon.text)
+                try:
+                    respon = model.generate_content(prompt)
+                    st.markdown(respon.text)
+                except Exception as e:
+                    st.error(f"Terjadi kendala pemanggilan AI: {e}")
 
 # ==========================================
 # 2. MENU KAMUS TURATS KLASIK
@@ -64,30 +79,33 @@ elif menu == "📖 Kamus Turats Klasik (Lisanul 'Arab)":
     st.header("📖 Mu'jam Turats Klasik AI")
     st.caption("Rujukan: Mu'jam Maqayis al-Lughah (Ibnu Faris) & Lisanul 'Arab (Ibnu Manzhur)")
     
-    kata_input = st.text_input("Masukkan Kata Arab yang Ingin Dibedah (Akar kata atau bentukan):", placeholder="Contoh: فقه, رحم, صلح, علم, طهر")
+    kata_input = st.text_input("Masukkan Kata Arab yang Ingin Dibedah (Akar kata atau bentukan):", placeholder="Contoh: فقه, رحم, انتهك, صلح, علم")
     btn_bedah = st.button("Bedah Akar Kata Sekarang 🔍", type="primary")
     
     if btn_bedah and kata_input:
         with st.spinner(f"Membuka referensi Maqayis al-Lughah dan Lisanul 'Arab untuk '{kata_input}'..."):
             prompt_kamus = f"""
-            Anda adalah pakar bahasa Arab klasik dan mu'jam turats.
+            Anda adalah pakar filologi bahasa Arab turats dan mu'jam lughawi.
             Bedah kata Arab berikut: "{kata_input}".
             
             Sajikan dengan format rapi berikut:
             ### 1. Akar Kata & Wazan Asal (أصل الكلمة)
-            Sebutkan huruf asal tsulatsi mujarrad dan bab wazan fi'ilnya.
+            Sebutkan huruf asal tsulatsi mujarrad dan wazan fi'ilnya.
 
-            ### 2. Bedah Makna Maqayis al-Lughah (Ibnu Faris)
-            Kutip atau jelaskan apa poros makna asal yang disimpulkan oleh Ibnu Faris dalam kitabnya معجم مقاييس اللغة.
+            ### 2. Poros Makna Maqayis al-Lughah (Ibnu Faris)
+            Jelaskan poros makna asal yang diterangkan oleh Ibnu Faris dalam معجم مقاييس اللغة.
 
             ### 3. Penjelasan Lisanul 'Arab (Ibnu Manzhur)
-            Uraikan bagaimana lafaz ini digunakan dalam lisan fusha, derivasi (pecahan kata) utamanya, serta syawahid (Al-Qur'an/Hadits/Syair) jika ada.
+            Uraikan bagaimana lafaz ini dan derivasinya digunakan dalam lisan fusha serta syawahidnya jika ada.
 
             ### 4. Faedah Pengajaran untuk Santri
-            Berikan kesimpulan ringkas bagaimana guru mengajarkan hakikat makna kata ini agar santri paham kaitan arti bahasa dengan istilah syariat.
+            Kesimpulan ringkas bagaimana guru mengajarkan hakikat kata ini agar murid paham konteks syar'i dan sastranya.
             """
-            respon_kamus = model.generate_content(prompt_kamus)
-            st.markdown(respon_kamus.text)
+            try:
+                respon_kamus = model.generate_content(prompt_kamus)
+                st.markdown(respon_kamus.text)
+            except Exception as e:
+                st.error(f"Terjadi kendala pemanggilan AI: {e}")
 
 # ==========================================
 # 3. MENU PENYUSUN MODUL AJAR
@@ -115,5 +133,8 @@ elif menu == "📝 Penyusun Modul Ajar Santri":
             3. 🎯 **Poin-Poin Wajib Catat**: 3-5 poin kunci yang harus ditulis santri di buku catatan.
             4. 🗣️ **Pertanyaan Diskusi Kelas**: 1 pertanyaan kritis untuk menguji pemahaman santri.
             """
-            respon_modul = model.generate_content(prompt_modul)
-            st.markdown(respon_modul.text)
+            try:
+                respon_modul = model.generate_content(prompt_modul)
+                st.markdown(respon_modul.text)
+            except Exception as e:
+                st.error(f"Terjadi kendala: {e}")
