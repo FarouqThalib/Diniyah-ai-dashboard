@@ -24,7 +24,7 @@ except Exception as e:
     st.stop()
 
 # Pilihan Model Online
-MODEL_NAME = "gemini-2.5-flash"
+MODEL_NAME = "gemini-3.6-flash"
 
 menu = st.sidebar.radio(
     "Pilih Menu:",
